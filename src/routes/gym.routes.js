@@ -7,10 +7,10 @@ const prisma =new PrismaClient();
 
 router.get('/obtener_asistencia', async (req, res) => {
     const { date } = req.body;
- 
+
     // Convertimos la fecha recibida a un objeto Date compatible con Prisma
     const fecha = new Date(`${date}T00:00:00Z`); // Asegura que esté en UTC al inicio del día
- 
+
     try {
         const usuarios = await prisma.usuario.findMany({
             select: {
@@ -34,7 +34,7 @@ router.get('/obtener_asistencia', async (req, res) => {
                 }
             }
         });
- 
+
         const usuariosConAsistencia = usuarios.map(usuario => {
             const asistencia = usuario.matriculas[0]?.asistencias[0];
             return {
@@ -42,18 +42,18 @@ router.get('/obtener_asistencia', async (req, res) => {
                 nombre: usuario.nombre,
                 apellido: usuario.apellido,
                 email: usuario.email,
+                id_matricula: usuario.matriculas[0]?.id_matricula || null, // Añadido id_matricula
                 hora_entrada: asistencia?.hora_entrada ? asistencia.hora_entrada.toISOString().split('T')[1].split('.')[0] : null,
                 hora_salida: asistencia?.hora_salida ? asistencia.hora_salida.toISOString().split('T')[1].split('.')[0] : null
             };
         });
- 
+
         res.json(usuariosConAsistencia); // Envía la respuesta JSON con los datos procesados
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-
 router.post('/marcar_asistencia', async (req, res) => {
     const { id_matricula, date, time } = req.body;
 
