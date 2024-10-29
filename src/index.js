@@ -1,15 +1,20 @@
 import express from 'express';
 import gymRoutes from './routes/gym.routes.js';
+import cors from 'cors'; // Agregar cors si es necesario
 
 const app = express();
 
+app.use(cors()); // Agregar esta línea si necesitas CORS
 app.use(express.json());
+
+// Rutas
 app.use('/api', gymRoutes);
 
-const PORT = process.env.PORT || 3000; // Usa el puerto asignado por Vercel o 3000 como fallback
-
-app.listen(PORT, () => {
-    console.log('Server on port', PORT); // Escucha en el puerto asignado
+// Ruta de prueba
+app.get('/', (req, res) => {
+    const name = process.env.NAME || 'World'; // Cambia esto según necesites
+    res.send(`Hello ${name}`);
 });
 
+// Exportar la app para Vercel
 export default app;
