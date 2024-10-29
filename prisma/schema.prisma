@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model actividades {
+  id_actividad     Int        @id @default(autoincrement())
+  id_gimnasio      Int?
+  nombre_actividad String     @db.VarChar(100)
+  descripcion      String?    @db.Text
+  gimnasios        gimnasios? @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "actividades_ibfk_1")
+  horarios         horarios[]
+
+  @@index([id_gimnasio], map: "id_gimnasio")
+}
+
+model asistencias {
+  id_asistencia     Int                           @id @default(autoincrement())
+  id_matricula      Int?
+  fecha             DateTime                      @db.Date
+  hora_entrada      DateTime?                     @db.Time(0)
+  hora_salida       DateTime?                     @db.Time(0)
+  estado_asistencia asistencias_estado_asistencia
+  matriculas        matriculas?                   @relation(fields: [id_matricula], references: [id_matricula], onDelete: NoAction, onUpdate: NoAction, map: "asistencias_ibfk_1")
+
+  @@index([id_matricula], map: "id_matricula")
+}
+
+model equipos {
+  id_equipo                   Int                      @id @default(autoincrement())
+  id_gimnasio                 Int?
+  nombre_equipo               String                   @db.VarChar(100)
+  estado                      equipos_estado
+  fecha_ultimo_mantenimiento  DateTime?                @db.Date
+  fecha_proximo_mantenimiento DateTime?                @db.Date
+  tipo_frecuencia             equipos_tipo_frecuencia?
+  costo_total_mantenimiento   Decimal?                 @default(0.00) @db.Decimal(10, 2)
+  ultimo_costo_mantenimiento  Decimal?                 @default(0.00) @db.Decimal(10, 2)
+  gimnasios                   gimnasios?               @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "equipos_ibfk_1")
+  mov_financieros             mov_financieros[]
+
+  @@index([id_gimnasio], map: "id_gimnasio")
+}
+
+model gimnasios {
+  id_gimnasio     Int               @id @default(autoincrement())
+  nombre          String            @db.VarChar(45)
+  correo          String?           @db.VarChar(100)
+  telefono        String?           @db.VarChar(15)
+  direccion       String?           @db.VarChar(200)
+  actividades     actividades[]
+  equipos         equipos[]
+  horarios        horarios[]
+  matriculas      matriculas[]
+  membresias      membresias[]
+  mov_financieros mov_financieros[]
+  servicios_local servicios_local[]
+  tipo_membresia  tipo_membresia[]
+  trabajadores    trabajadores[]
+  usuario         usuario[]
+}
+
+model horarios {
+  id_horario    Int           @id @default(autoincrement())
+  id_gimnasio   Int?
+  id_actividad  Int?
+  id_trabajador Int?
+  fecha         DateTime      @db.Date
+  hora_inicio   DateTime?     @db.Time(0)
+  hora_fin      DateTime?     @db.Time(0)
+  gimnasios     gimnasios?    @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "horarios_ibfk_1")
+  actividades   actividades?  @relation(fields: [id_actividad], references: [id_actividad], onDelete: NoAction, onUpdate: NoAction, map: "horarios_ibfk_2")
+  trabajadores  trabajadores? @relation(fields: [id_trabajador], references: [id_trabajador], onDelete: NoAction, onUpdate: NoAction, map: "horarios_ibfk_3")
+
+  @@index([id_actividad], map: "id_actividad")
+  @@index([id_gimnasio], map: "id_gimnasio")
+  @@index([id_trabajador], map: "id_trabajador")
+}
+
+model matriculas {
+  id_matricula     Int                         @id @default(autoincrement())
+  id_usuario       Int?
+  id_membresia     Int?
+  id_gimnasio      Int?
+  fecha_matricula  DateTime                    @db.Date
+  estado_matricula matriculas_estado_matricula
+  asistencias      asistencias[]
+  usuario          usuario?                    @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "matriculas_ibfk_1")
+  membresias       membresias?                 @relation(fields: [id_membresia], references: [id_membresia], onDelete: NoAction, onUpdate: NoAction, map: "matriculas_ibfk_2")
+  gimnasios        gimnasios?                  @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "matriculas_ibfk_3")
+  mov_financieros  mov_financieros[]
+
+  @@index([id_gimnasio], map: "id_gimnasio")
+  @@index([id_membresia], map: "id_membresia")
+  @@index([id_usuario], map: "id_usuario")
+}
+
+model membresias {
+  id_membresia      Int             @id @default(autoincrement())
+  id_usuario        Int?
+  id_tipo_membresia Int?
+  id_gimnasio       Int?
+  fecha_inicio      DateTime        @db.Date
+  fecha_vencimiento DateTime        @db.Date
+  matriculas        matriculas[]
+  usuario           usuario?        @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "membresias_ibfk_1")
+  tipo_membresia    tipo_membresia? @relation(fields: [id_tipo_membresia], references: [id_tipo_membresia], onDelete: NoAction, onUpdate: NoAction, map: "membresias_ibfk_2")
+  gimnasios         gimnasios?      @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "membresias_ibfk_3")
+
+  @@index([id_gimnasio], map: "id_gimnasio")
+  @@index([id_tipo_membresia], map: "id_tipo_membresia")
+  @@index([id_usuario], map: "id_usuario")
+}
+
+model mov_financieros {
+  id_mov_financieros Int                             @id @default(autoincrement())
+  id_matricula       Int?
+  id_trabajador      Int?
+  id_servicio        Int?
+  id_equipo          Int?
+  id_gimnasio        Int?
+  tipo_movimiento    mov_financieros_tipo_movimiento
+  descripcion        String?                         @db.Text
+  fecha              DateTime                        @db.Date
+  monto              Decimal                         @db.Decimal(10, 2)
+  frecuencia         mov_financieros_frecuencia?
+  matriculas         matriculas?                     @relation(fields: [id_matricula], references: [id_matricula], onDelete: NoAction, onUpdate: NoAction, map: "mov_financieros_ibfk_1")
+  trabajadores       trabajadores?                   @relation(fields: [id_trabajador], references: [id_trabajador], onDelete: NoAction, onUpdate: NoAction, map: "mov_financieros_ibfk_2")
+  servicios_local    servicios_local?                @relation(fields: [id_servicio], references: [id_servicios], onDelete: NoAction, onUpdate: NoAction, map: "mov_financieros_ibfk_3")
+  equipos            equipos?                        @relation(fields: [id_equipo], references: [id_equipo], onDelete: NoAction, onUpdate: NoAction, map: "mov_financieros_ibfk_4")
+  gimnasios          gimnasios?                      @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "mov_financieros_ibfk_5")
+
+  @@index([id_equipo], map: "id_equipo")
+  @@index([id_gimnasio], map: "id_gimnasio")
+  @@index([id_matricula], map: "id_matricula")
+  @@index([id_servicio], map: "id_servicio")
+  @@index([id_trabajador], map: "id_trabajador")
+}
+
+model servicios_local {
+  id_servicios     Int                              @id @default(autoincrement())
+  id_gimnasio      Int?
+  estado           servicios_local_estado
+  nombre_servicio  String                           @db.VarChar(45)
+  fecha_programada DateTime?                        @db.Date
+  monto            Decimal?                         @db.Decimal(10, 2)
+  tipo_frecuencia  servicios_local_tipo_frecuencia?
+  mov_financieros  mov_financieros[]
+  gimnasios        gimnasios?                       @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "servicios_local_ibfk_1")
+
+  @@index([id_gimnasio], map: "id_gimnasio")
+}
+
+model tipo_membresia {
+  id_tipo_membresia Int                 @id @default(autoincrement())
+  tipo              tipo_membresia_tipo
+  duracion_meses    Int
+  precio            Decimal             @db.Decimal(10, 2)
+  id_gimnasio       Int?
+  membresias        membresias[]
+  gimnasios         gimnasios?          @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "tipo_membresia_ibfk_1")
+
+  @@index([id_gimnasio], map: "id_gimnasio")
+}
+
+model trabajadores {
+  id_trabajador         Int                      @id @default(autoincrement())
+  id_gimnasio           Int?
+  nombres               String                   @db.VarChar(45)
+  apellidos             String                   @db.VarChar(45)
+  email                 String                   @db.VarChar(100)
+  cargo                 trabajadores_cargo
+  tipo_sueldo           trabajadores_tipo_sueldo
+  sueldo                Decimal?                 @db.Decimal(10, 2)
+  horarios              horarios[]
+  mov_financieros       mov_financieros[]
+  gimnasios             gimnasios?               @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "trabajadores_ibfk_1")
+  usuarios_trabajadores usuarios_trabajadores[]
+
+  @@index([id_gimnasio], map: "id_gimnasio")
+}
+
+model usuario {
+  id_usuario     Int          @id @default(autoincrement())
+  id_gimnasio    Int?
+  nombre         String       @db.VarChar(100)
+  apellido       String       @db.VarChar(45)
+  dni            String       @db.VarChar(45)
+  email          String       @db.VarChar(200)
+  telefono       String?      @db.VarChar(15)
+  direccion      String?      @db.VarChar(200)
+  fecha_registro DateTime?    @db.Date
+  matriculas     matriculas[]
+  membresias     membresias[]
+  gimnasios      gimnasios?   @relation(fields: [id_gimnasio], references: [id_gimnasio], onDelete: NoAction, onUpdate: NoAction, map: "usuario_ibfk_1")
+
+  @@index([id_gimnasio], map: "id_gimnasio")
+}
+
+model usuarios_trabajadores {
+  id_usuario    Int           @id @default(autoincrement())
+  id_trabajador Int?
+  password      String        @db.VarChar(200)
+  trabajadores  trabajadores? @relation(fields: [id_trabajador], references: [id_trabajador], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_trabajadores_ibfk_1")
+
+  @@index([id_trabajador], map: "id_trabajador")
+}
+
+enum tipo_membresia_tipo {
+  mensual
+  trimestral
+  semestral
+  anual
+}
+
+enum servicios_local_estado {
+  al_dia
+  programado
+}
+
+enum equipos_estado {
+  operativo
+  mantenimiento
+}
+
+enum trabajadores_cargo {
+  entrenador
+  limpieza
+  administrador
+  recepcionista
+}
+
+enum matriculas_estado_matricula {
+  activa
+  inactiva
+}
+
+enum asistencias_estado_asistencia {
+  presente
+  ausente
+}
+
+enum servicios_local_tipo_frecuencia {
+  semanal
+  mensual
+  anual
+  nico    @map("único")
+}
+
+enum mov_financieros_tipo_movimiento {
+  ingreso
+  egreso
+}
+
+enum trabajadores_tipo_sueldo {
+  fijo
+  por_hora
+}
+
+enum equipos_tipo_frecuencia {
+  semanal
+  mensual
+  anual
+}
+
+enum mov_financieros_frecuencia {
+  mensual
+  semanal
+  anual
+  nico       @map("único")
+  trimestral
+}
