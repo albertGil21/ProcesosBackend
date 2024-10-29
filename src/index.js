@@ -11,3 +11,5 @@ const PORT = process.env.PORT || 3000; // Usa el puerto asignado por Vercel o 30
 app.listen(PORT, () => {
     console.log('Server on port', PORT); // Escucha en el puerto asignado
 });
+
+export default app;
