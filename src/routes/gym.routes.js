@@ -254,5 +254,214 @@ router.post('/crear_usuario', async (req, res) => {
     }
 });
 
+// Endpoint para agregar una actividad con horarios
+router.post('/actividades', async (req, res) => {
+    const { id_gimnasio, nombre_actividad, descripcion, horarios } = req.body;
+
+    // Validar datos obligatorios
+    if (!nombre_actividad) {
+        return res.status(400).json({ error: 'El campo nombre_actividad es obligatorio.' });
+    }
+
+    if (!horarios || !Array.isArray(horarios) || horarios.length === 0) {
+        return res.status(400).json({ error: 'Debes proporcionar al menos un horario.' });
+    }
+
+    try {
+        // Depurar los datos recibidos
+        console.log("Datos recibidos para los horarios:", horarios);
+
+        // Convertir las fechas a objetos Date para garantizar el formato correcto
+        const horariosCorrectos = horarios.map(h => ({
+            ...h,
+            fecha: new Date(h.fecha), // Asegura que la fecha es un objeto Date
+            hora_inicio: new Date(h.hora_inicio), // Asegura que hora_inicio es un objeto Date
+            hora_fin: new Date(h.hora_fin), // Asegura que hora_fin es un objeto Date
+        }));
+
+        console.log("Datos de horarios convertidos:", horariosCorrectos);
+
+        // Crear la actividad con horarios asociados
+        const nuevaActividad = await prisma.actividades.create({
+            data: {
+                id_gimnasio,
+                nombre_actividad,
+                descripcion,
+                horarios: {
+                    create: horariosCorrectos.map(h => ({
+                        id_gimnasio,
+                        fecha: h.fecha,
+                        hora_inicio: h.hora_inicio,
+                        hora_fin: h.hora_fin,
+                        id_trabajador: h.id_trabajador || null, // Opcional
+                    })),
+                },
+            },
+            include: {
+                horarios: true, // Incluye los horarios creados en la respuesta
+            },
+        });
+
+        res.status(201).json({ message: 'Actividad y horarios creados exitosamente.', actividad: nuevaActividad });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Ocurrió un error al crear la actividad y sus horarios.' });
+    }
+});
+
+// Endpoint para agregar un trabajador
+router.post('/trabajadores', async (req, res) => {
+    try {
+      const {
+        id_gimnasio,
+        nombres,
+        apellidos,
+        email,
+        cargo,
+        tipo_sueldo,
+        sueldo
+      } = req.body;
+  
+      // Validaciones básicas
+      if (!nombres || !apellidos || !email || !cargo || !tipo_sueldo) {
+        return res.status(400).json({ error: 'Todos los campos requeridos deben estar completos.' });
+      }
+  
+      // Creación del trabajador
+      const nuevoTrabajador = await prisma.trabajadores.create({
+        data: {
+          id_gimnasio: id_gimnasio || null, // Permite valores nulos para id_gimnasio
+          nombres,
+          apellidos,
+          email,
+          cargo,
+          tipo_sueldo,
+          sueldo: sueldo || null, // Permite valores nulos para sueldo
+        },
+      });
+  
+      res.status(201).json({
+        message: 'Trabajador creado exitosamente.',
+        trabajador: nuevoTrabajador,
+      });
+    } catch (error) {
+      console.error('Error al agregar trabajador:', error);
+      res.status(500).json({
+        error: 'Ocurrió un error al agregar el trabajador.',
+        details: error.message,
+      });
+    }
+  });
+// Endpoint para obtener todas las actividades
+router.get('/actividades', async (req, res) => {
+    try {
+      // Obtener las actividades con los horarios y el profesor (trabajador)
+      const actividades = await prisma.actividades.findMany({
+        include: {
+          horarios: {
+            include: {
+              trabajadores: {
+                select: {
+                  nombres: true,
+                  apellidos: true
+                }
+              }
+            }
+          }
+        }
+      });
+  
+      // Formatear la respuesta para mostrar los campos solicitados
+      const actividadesFormateadas = actividades.map(actividad => {
+        return actividad.horarios.map(horario => {
+          // Convertir las fechas y horas para mantener el formato correcto
+          const hora_inicio = new Date(horario.hora_inicio);
+          const hora_fin = new Date(horario.hora_fin);
+          
+          // Asegurar que las horas se muestren en el formato adecuado
+          const horaInicioFormateada = `${hora_inicio.getUTCHours()}:${hora_inicio.getUTCMinutes().toString().padStart(2, '0')}`;
+          const horaFinFormateada = `${hora_fin.getUTCHours()}:${hora_fin.getUTCMinutes().toString().padStart(2, '0')}`;
+  
+          return {
+            id_actividad: actividad.id_actividad, // Incluir el id de la actividad
+            fecha: horario.fecha,
+            hora_inicio: horaInicioFormateada, // Formato correcto de hora
+            hora_fin: horaFinFormateada, // Formato correcto de hora
+            actividad: actividad.nombre_actividad,
+            profesor: `${horario.trabajadores.nombres} ${horario.trabajadores.apellidos}`
+          };
+        });
+      }).flat();
+  
+      // Devolver la respuesta con las actividades
+      res.json({
+        actividades: actividadesFormateadas
+      });
+    } catch (error) {
+      console.error('Error al obtener las actividades:', error);
+      res.status(500).json({
+        message: 'Error al obtener las actividades'
+      });
+    }
+});
+
+// Endpoint para obtener la lista de trabajadores con los campos solicitados
+router.get('/trabajadores', async (req, res) => {
+    try {
+      const trabajadores = await prisma.trabajadores.findMany({
+        select: {
+          nombres: true,
+          apellidos: true,
+          tipo_sueldo: true,
+          cargo: true
+        }
+      });
+      res.json(trabajadores);
+    } catch (error) {
+      res.status(500).json({ error: 'Hubo un error al obtener los trabajadores' });
+    }
+  });
+
+ // Endpoint para eliminar una actividad
+router.delete('/actividades', async (req, res) => {
+    const { id_actividad } = req.body; // Obtén el id de la actividad desde el cuerpo de la solicitud
+    
+    // Verificar si el id fue proporcionado
+    if (!id_actividad) {
+      return res.status(400).json({ error: 'El campo id_actividad es obligatorio.' });
+    }
+  
+    try {
+      // Verificar si la actividad existe
+      const actividadExistente = await prisma.actividades.findUnique({
+        where: { id_actividad: parseInt(id_actividad) },
+        include: { horarios: true }, // Incluir horarios asociados a la actividad
+      });
+  
+      if (!actividadExistente) {
+        return res.status(404).json({ error: 'Actividad no encontrada.' });
+      }
+  
+      // Eliminar los horarios asociados a la actividad
+      if (actividadExistente.horarios.length > 0) {
+        await prisma.horarios.deleteMany({
+          where: { id_actividad: parseInt(id_actividad) }
+        });
+      }
+  
+      // Eliminar la actividad
+      await prisma.actividades.delete({
+        where: { id_actividad: parseInt(id_actividad) }
+      });
+  
+      // Devolver una respuesta exitosa
+      res.status(200).json({ message: 'Actividad y horarios eliminados exitosamente.' });
+    } catch (error) {
+      console.error('Error al eliminar la actividad:', error);
+      res.status(500).json({ error: 'Ocurrió un error al eliminar la actividad.' });
+    }
+  });
+  
+
 
 export default router;

@@ -11,10 +11,13 @@ app.use(express.json());
 app.use('/api', gymRoutes);
 
 // Ruta de prueba
-app.get('/', (req, res) => {
-    const name = process.env.NAME || 'World'; // Cambia esto según necesites
-    res.send(`Hello ${name}`);
-});
+// Para desarrollo local
+if (process.env.NODE_ENV !== 'production') {
+    const port = parseInt(process.env.PORT, 10) || 3000;
+    app.listen(port, () => {
+      console.log(`Servidor ejecutándose en http://localhost:${port}`);
+    });
+  }
 
 // Exportar la app para Vercel
 export default app;
