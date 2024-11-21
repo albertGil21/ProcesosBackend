@@ -6,54 +6,63 @@ const prisma =new PrismaClient();
 
 
 router.get('/obtener_asistencia', async (req, res) => {
-    const { date } = req.body;
+  const { date } = req.body;
 
-    // Convertimos la fecha recibida a un objeto Date compatible con Prisma
-    const fecha = new Date(`${date}T00:00:00Z`); // Asegura que esté en UTC al inicio del día
+  try {
+      // Convertir la fecha recibida a formato YYYY-MM-DD
+      const [day, month, year] = date.split('-');
+      const formattedDate = `${year}-${month}-${day}`;
 
-    try {
-        const usuarios = await prisma.usuario.findMany({
-            select: {
-                id_usuario: true,
-                nombre: true,
-                apellido: true,
-                email: true,
-                matriculas: {
-                    select: {
-                        id_matricula: true,
-                        asistencias: {
-                            where: {
-                                fecha: fecha // Utilizamos la fecha como un objeto Date
-                            },
-                            select: {
-                                hora_entrada: true,
-                                hora_salida: true
-                            }
-                        }
-                    }
-                }
-            }
-        });
+      // Crear el objeto Date asegurando que sea en UTC al inicio del día
+      const fecha = new Date(`${formattedDate}T00:00:00Z`);
+      
+      if (isNaN(fecha)) {
+          return res.status(400).json({ message: 'Invalid date format' });
+      }
 
-        const usuariosConAsistencia = usuarios.map(usuario => {
-            const asistencia = usuario.matriculas[0]?.asistencias[0];
-            return {
-                id_usuario: usuario.id_usuario,
-                nombre: usuario.nombre,
-                apellido: usuario.apellido,
-                email: usuario.email,
-                id_matricula: usuario.matriculas[0]?.id_matricula || null, // Añadido id_matricula
-                hora_entrada: asistencia?.hora_entrada ? asistencia.hora_entrada.toISOString().split('T')[1].split('.')[0] : null,
-                hora_salida: asistencia?.hora_salida ? asistencia.hora_salida.toISOString().split('T')[1].split('.')[0] : null
-            };
-        });
+      const usuarios = await prisma.usuario.findMany({
+          select: {
+              id_usuario: true,
+              nombre: true,
+              apellido: true,
+              email: true,
+              matriculas: {
+                  select: {
+                      id_matricula: true,
+                      asistencias: {
+                          where: {
+                              fecha: fecha
+                          },
+                          select: {
+                              hora_entrada: true,
+                              hora_salida: true
+                          }
+                      }
+                  }
+              }
+          }
+      });
 
-        res.json(usuariosConAsistencia); // Envía la respuesta JSON con los datos procesados
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+      const usuariosConAsistencia = usuarios.map(usuario => {
+          const asistencia = usuario.matriculas[0]?.asistencias[0];
+          return {
+              id_usuario: usuario.id_usuario,
+              nombre: usuario.nombre,
+              apellido: usuario.apellido,
+              email: usuario.email,
+              id_matricula: usuario.matriculas[0]?.id_matricula || null,
+              hora_entrada: asistencia?.hora_entrada ? asistencia.hora_entrada.toISOString().split('T')[1].split('.')[0] : null,
+              hora_salida: asistencia?.hora_salida ? asistencia.hora_salida.toISOString().split('T')[1].split('.')[0] : null
+          };
+      });
+
+      res.json(usuariosConAsistencia);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
 });
+
 router.post('/marcar_asistencia', async (req, res) => {
     const { id_matricula, date, time } = req.body;
 
