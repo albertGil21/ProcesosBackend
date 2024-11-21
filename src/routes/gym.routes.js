@@ -5,7 +5,7 @@ const router=Router();
 const prisma =new PrismaClient();
 
 
-router.get('/obtener_asistencia', async (req, res) => {
+router.post('/obtener_asistencia', async (req, res) => {
   const { date } = req.body;
 
   try {
