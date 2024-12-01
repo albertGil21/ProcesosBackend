@@ -361,58 +361,27 @@ router.post('/trabajadores', async (req, res) => {
       });
     }
   });
-// Endpoint para obtener todas las actividades
-router.get('/actividades', async (req, res) => {
+  router.get('/actividades', async (req, res) => {
     try {
-      // Obtener las actividades con los horarios y el profesor (trabajador)
-      const actividades = await prisma.actividades.findMany({
-        include: {
-          horarios: {
+        // Consulta para obtener todas las actividades con sus horarios y trabajadores
+        const actividades = await prisma.actividades.findMany({
             include: {
-              trabajadores: {
-                select: {
-                  nombres: true,
-                  apellidos: true
-                }
-              }
-            }
-          }
-        }
-      });
-  
-      // Formatear la respuesta para mostrar los campos solicitados
-      const actividadesFormateadas = actividades.map(actividad => {
-        return actividad.horarios.map(horario => {
-          // Convertir las fechas y horas para mantener el formato correcto
-          const hora_inicio = new Date(horario.hora_inicio);
-          const hora_fin = new Date(horario.hora_fin);
-          
-          // Asegurar que las horas se muestren en el formato adecuado
-          const horaInicioFormateada = `${hora_inicio.getUTCHours()}:${hora_inicio.getUTCMinutes().toString().padStart(2, '0')}`;
-          const horaFinFormateada = `${hora_fin.getUTCHours()}:${hora_fin.getUTCMinutes().toString().padStart(2, '0')}`;
-  
-          return {
-            id_actividad: actividad.id_actividad, // Incluir el id de la actividad
-            fecha: horario.fecha,
-            hora_inicio: horaInicioFormateada, // Formato correcto de hora
-            hora_fin: horaFinFormateada, // Formato correcto de hora
-            actividad: actividad.nombre_actividad,
-            profesor: `${horario.trabajadores.nombres} ${horario.trabajadores.apellidos}`
-          };
+                horarios: {
+                    include: {
+                        trabajadores: true, // Incluye información de los trabajadores relacionados
+                    },
+                },
+            },
         });
-      }).flat();
-  
-      // Devolver la respuesta con las actividades
-      res.json({
-        actividades: actividadesFormateadas
-      });
+
+        // Respuesta con las actividades obtenidas
+        res.status(200).json(actividades);
     } catch (error) {
-      console.error('Error al obtener las actividades:', error);
-      res.status(500).json({
-        message: 'Error al obtener las actividades'
-      });
+        console.error("Error al obtener las actividades:", error);
+        res.status(500).json({ error: 'Ocurrió un error al obtener las actividades.' });
     }
 });
+
 
 // Endpoint para obtener la lista de trabajadores con los campos solicitados
 router.get('/trabajadores', async (req, res) => {
