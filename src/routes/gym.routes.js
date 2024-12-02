@@ -264,23 +264,26 @@ router.post('/crear_usuario', async (req, res) => {
 });
 
 // Endpoint para agregar una actividad con horarios
+// Endpoint para crear actividades
 router.post('/actividades', async (req, res) => {
     const { id_gimnasio, nombre_actividad, descripcion, horarios } = req.body;
 
     // Validar datos obligatorios
     if (!nombre_actividad) {
+        console.error(`[${new Date().toISOString()}] Error: Falta el campo obligatorio 'nombre_actividad'.`);
         return res.status(400).json({ error: 'El campo nombre_actividad es obligatorio.' });
     }
 
     if (!horarios || !Array.isArray(horarios) || horarios.length === 0) {
+        console.error(`[${new Date().toISOString()}] Error: No se proporcionaron horarios válidos.`);
         return res.status(400).json({ error: 'Debes proporcionar al menos un horario.' });
     }
 
     try {
         // Depurar los datos recibidos
-        console.log("Datos recibidos para los horarios:", horarios);
+        console.log(`[${new Date().toISOString()}] Datos recibidos para los horarios:`, horarios);
 
-        // Convertir las fechas a objetos Date para garantizar el formato correcto
+        // Convertir las fechas a objetos Date
         const horariosCorrectos = horarios.map(h => ({
             ...h,
             fecha: new Date(h.fecha), // Asegura que la fecha es un objeto Date
@@ -288,10 +291,10 @@ router.post('/actividades', async (req, res) => {
             hora_fin: new Date(h.hora_fin), // Asegura que hora_fin es un objeto Date
         }));
 
-        console.log("Datos de horarios convertidos:", horariosCorrectos);
+        console.log(`[${new Date().toISOString()}] Datos de horarios convertidos:`, horariosCorrectos);
 
         // Crear la actividad con horarios asociados
-        const nuevaActividad = await prisma.actividades.create({
+        const nuevaActividad = await prismaClient.actividades.create({
             data: {
                 id_gimnasio,
                 nombre_actividad,
@@ -311,10 +314,17 @@ router.post('/actividades', async (req, res) => {
             },
         });
 
+        console.log(`[${new Date().toISOString()}] Actividad creada exitosamente con ID: ${nuevaActividad.id_actividad}`);
         res.status(201).json({ message: 'Actividad y horarios creados exitosamente.', actividad: nuevaActividad });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Ocurrió un error al crear la actividad y sus horarios.' });
+        // Log detallado del error
+        console.error(`[${new Date().toISOString()}] Error al crear actividad:`, error);
+
+        // Respuesta con error
+        res.status(500).json({
+            error: 'Ocurrió un error al crear la actividad y sus horarios.',
+            detalle: error.message,
+        });
     }
 });
 
