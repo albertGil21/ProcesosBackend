@@ -398,6 +398,7 @@ router.get('/trabajadores', async (req, res) => {
     try {
       const trabajadores = await prisma.trabajadores.findMany({
         select: {
+            id_trabajador:true,
           nombres: true,
           apellidos: true,
           tipo_sueldo: true,
@@ -448,8 +449,70 @@ router.delete('/actividades', async (req, res) => {
       console.error('Error al eliminar la actividad:', error);
       res.status(500).json({ error: 'Ocurrió un error al eliminar la actividad.' });
     }
-  });
+});
   
+router.delete('/usuarios/eliminar', async (req, res) => {
+    const { id_usuario } = req.body;
+
+    if (!id_usuario) {
+        return res.status(400).json({ error: 'El campo id_usuario es obligatorio.' });
+    }
+
+    try {
+        const userId = parseInt(id_usuario);
+
+        // Eliminar registros relacionados en asistencias (relacionados con matriculas)
+        await prisma.asistencias.deleteMany({
+            where: {
+                matriculas: {
+                    id_usuario: userId,
+                },
+            },
+        });
+
+        // Eliminar registros relacionados en mov_financieros (relacionados con matriculas)
+        await prisma.mov_financieros.deleteMany({
+            where: {
+                matriculas: {
+                    id_usuario: userId,
+                },
+            },
+        });
+
+        // Eliminar registros relacionados en la tabla matriculas
+        await prisma.matriculas.deleteMany({
+            where: {
+                id_usuario: userId,
+            },
+        });
+
+        // Eliminar registros relacionados en la tabla membresias
+        await prisma.membresias.deleteMany({
+            where: {
+                id_usuario: userId,
+            },
+        });
+
+        // Finalmente, eliminar el usuario
+        const usuarioEliminado = await prisma.usuario.delete({
+            where: { id_usuario: userId },
+        });
+
+        res.status(200).json({
+            message: 'Usuario eliminado correctamente junto con sus relaciones.',
+            usuario: usuarioEliminado,
+        });
+    } catch (error) {
+        console.error(error);
+
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+
+        res.status(500).json({ error: 'Error al eliminar el usuario.' });
+    }
+});
+
 
 
 export default router;
