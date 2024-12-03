@@ -67,20 +67,17 @@ router.post('/marcar_asistencia', async (req, res) => {
     const { id_matricula, date, time } = req.body;
 
     try {
-        // Convertimos id_matricula a un número entero
         const matriculaId = parseInt(id_matricula, 10);
-        const fecha = new Date(`${date}T00:00:00Z`); 
+        const fecha = new Date(`${date}T00:00:00Z`);
 
         if (isNaN(matriculaId)) {
             return res.status(400).json({ message: 'El id_matricula debe ser un número válido' });
         }
 
-        // Crear un objeto Date para hora_entrada
         const [entradaHours, entradaMinutes] = time.split(':').map(Number);
         const horaEntrada = new Date(fecha);
-        horaEntrada.setUTCHours(entradaHours, entradaMinutes); // Usar setUTCHours para mantener en UTC
+        horaEntrada.setUTCHours(entradaHours, entradaMinutes);
 
-        // Verificar si ya existe una asistencia para el id_matricula y fecha dada
         const asistenciaExistente = await prisma.asistencias.findFirst({
             where: {
                 matriculas: {
@@ -91,12 +88,11 @@ router.post('/marcar_asistencia', async (req, res) => {
         });
 
         if (!asistenciaExistente) {
-            // No existe una asistencia para esa fecha, así que creamos una nueva con hora_entrada
             const nuevaAsistencia = await prisma.asistencias.create({
                 data: {
                     fecha: fecha,
-                    hora_entrada: horaEntrada, // Usamos el objeto Date para hora_entrada
-                    estado_asistencia: 'presente', // Ajusta el valor de estado_asistencia según tu lógica
+                    hora_entrada: horaEntrada,
+                    estado_asistencia: 'presente',
                     matriculas: {
                         connect: { id_matricula: matriculaId }
                     }
@@ -106,38 +102,45 @@ router.post('/marcar_asistencia', async (req, res) => {
                 message: 'Asistencia registrada con hora de entrada',
                 asistencia: {
                     ...nuevaAsistencia,
-                    hora_entrada: nuevaAsistencia.hora_entrada.toISOString().split('T')[1].split('.')[0] // Formatear la hora de entrada
+                    hora_entrada: nuevaAsistencia.hora_entrada.toISOString().split('T')[1].split('.')[0]
                 }
             });
         } else if (!asistenciaExistente.hora_salida) {
-            // Existe una asistencia con hora_entrada pero sin hora_salida, así que guardamos la salida
             const [salidaHours, salidaMinutes] = time.split(':').map(Number);
             const horaSalida = new Date(fecha);
-            horaSalida.setUTCHours(salidaHours, salidaMinutes); // Usar setUTCHours para mantener en UTC
+            horaSalida.setUTCHours(salidaHours, salidaMinutes);
 
             const asistenciaActualizada = await prisma.asistencias.update({
                 where: { id_asistencia: asistenciaExistente.id_asistencia },
                 data: {
-                    hora_salida: horaSalida, // Usamos el objeto Date para hora_salida
-                    estado_asistencia: 'presente' // Ajusta el valor de estado_asistencia según tu lógica
+                    hora_salida: horaSalida,
+                    estado_asistencia: 'presente'
                 }
             });
             res.json({
                 message: 'Asistencia registrada con hora de salida',
                 asistencia: {
                     ...asistenciaActualizada,
-                    hora_salida: asistenciaActualizada.hora_salida.toISOString().split('T')[1].split('.')[0] // Formatear la hora de salida
+                    hora_salida: asistenciaActualizada.hora_salida.toISOString().split('T')[1].split('.')[0]
                 }
             });
         } else {
-            // Si ya hay hora_salida, es un caso inesperado (la asistencia está completa)
-            res.status(400).json({ message: 'La asistencia para esta fecha ya está completa' });
+            // Si ya está completa, devolver el mismo JSON que antes
+            res.json({
+                message: 'La asistencia para esta fecha ya está completa',
+                asistencia: {
+                    ...asistenciaExistente,
+                    hora_entrada: asistenciaExistente.hora_entrada.toISOString().split('T')[1].split('.')[0],
+                    hora_salida: asistenciaExistente.hora_salida.toISOString().split('T')[1].split('.')[0]
+                }
+            });
         }
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error interno del servidor' });
     }
 });
+
 
 router.get('/obtener_usuario', async (req, res) => {
     try {
