@@ -519,6 +519,49 @@ router.delete('/usuarios/eliminar', async (req, res) => {
     }
 });
 
+// Endpoint para eliminar un trabajador
+router.delete('/trabajadores', async (req, res) => {
+    try {
+      const { id_trabajador } = req.body;
+  
+      // Validar que se haya proporcionado un ID
+      if (!id_trabajador) {
+        return res.status(400).json({ error: 'El ID del trabajador es requerido.' });
+      }
+  
+      // Verificar si el trabajador existe
+      const trabajadorExistente = await prisma.trabajadores.findUnique({
+        where: { id_trabajador: parseInt(id_trabajador) }, // Ajusta al nombre correcto del campo
+      });
+  
+      if (!trabajadorExistente) {
+        return res.status(404).json({ error: 'Trabajador no encontrado.' });
+      }
+  
+      // Eliminar registros relacionados primero
+await prisma.horarios.deleteMany({
+    where: { id_trabajador: parseInt(id_trabajador) },
+  });
+  
+  await prisma.mov_financieros.deleteMany({
+    where: { id_trabajador: parseInt(id_trabajador) },
+  });
+  
+  // Ahora eliminar al trabajador
+  await prisma.trabajadores.delete({
+    where: { id_trabajador: parseInt(id_trabajador) },
+  });
+      res.status(200).json({ message: 'Trabajador eliminado exitosamente.' });
+    } catch (error) {
+      console.error('Error al eliminar trabajador:', error);
+      res.status(500).json({
+        error: 'Ocurrió un error al eliminar el trabajador.',
+        details: error.message,
+      });
+    }
+  });
+  
+  
 
 
 export default router;
