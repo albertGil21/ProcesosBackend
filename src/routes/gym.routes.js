@@ -169,6 +169,7 @@ router.get('/obtener_usuario', async (req, res) => {
                 : null;
 
             return {
+                id_matricula: usuario.matriculas.length > 0 ? usuario.matriculas[0].id_matricula : null, // Incluye el id_matricula
                 dni: usuario.dni,
                 nombres: usuario.nombre,
                 apellidos: usuario.apellido,
@@ -185,6 +186,7 @@ router.get('/obtener_usuario', async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor' });
     }
 });
+
 
 router.post('/crear_usuario', async (req, res) => {
     const {
@@ -294,7 +296,7 @@ router.post('/actividades', async (req, res) => {
         console.log(`[${new Date().toISOString()}] Datos de horarios convertidos:`, horariosCorrectos);
 
         // Crear la actividad con horarios asociados
-        const nuevaActividad = await prismaClient.actividades.create({
+        const nuevaActividad = await prisma.actividades.create({
             data: {
                 id_gimnasio,
                 nombre_actividad,
@@ -371,6 +373,7 @@ router.post('/trabajadores', async (req, res) => {
       });
     }
   });
+
   router.get('/actividades', async (req, res) => {
     try {
         // Consulta para obtener todas las actividades con sus horarios y trabajadores
